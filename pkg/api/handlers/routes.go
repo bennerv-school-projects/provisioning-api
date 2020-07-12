@@ -4,9 +4,9 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"net/http"
 	"provisioning-api/pkg/api/k8sprobes"
-	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // Bring together all routes present in any packages.
@@ -17,25 +17,25 @@ func Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(
 
-			middleware.Logger,
+		middleware.Logger,
 
-			// Redirect slashes to the correct endpoint
-			middleware.RedirectSlashes,
+		// Redirect slashes to the correct endpoint
+		middleware.RedirectSlashes,
 
-			// Allow recovery from failed middleware
-			middleware.Recoverer,
+		// Allow recovery from failed middleware
+		middleware.Recoverer,
 
-			// Set request header content type Json
-			render.SetContentType(render.ContentTypeJSON),
+		// Set request header content type Json
+		render.SetContentType(render.ContentTypeJSON),
 
-			// Set response header to always be ContentType: application/json
-			func(next http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.Header().Set("Content-Type", "application/json")
-					next.ServeHTTP(w, r)
-				})
-			},
-		)
+		// Set response header to always be ContentType: application/json
+		func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				next.ServeHTTP(w, r)
+			})
+		},
+	)
 
 	// Versions API routes
 	router.Route("/v1", func(r chi.Router) {
@@ -50,7 +50,6 @@ func Routes() *chi.Mux {
 	router.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL("http://localhost:1323/swagger/doc.json"), //The url pointing to API definition"
 	))
-
 
 	return router
 }
