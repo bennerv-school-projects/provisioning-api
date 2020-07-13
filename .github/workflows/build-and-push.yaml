@@ -5,6 +5,9 @@ on:
     types: [created, edited]
 env:
   IMAGE_NAME: bennerv/saas-provisioner
+  CGO_ENABLED: 0 
+  GOOS: linux 
+  GOARCH: amd64
 
 jobs:
 
