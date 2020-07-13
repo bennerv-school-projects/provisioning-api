@@ -25,7 +25,7 @@ go run cmd/main.go
 ```bash
 kubectl -n provisioner create secret docker-registry bvesel-pull-secret \
   --docker-username=bennerv \
-  --docker-password=PASSWORD \
+  --docker-password=801e3784-276d-451e-a3d9-1d714cebaab0 \
   --docker-email=test@gmail.com
 ```
 

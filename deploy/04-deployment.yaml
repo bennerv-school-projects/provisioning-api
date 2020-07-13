@@ -11,50 +11,32 @@ spec:
   selector:
     matchLabels:
       app: provisioner
-  strategy:
-    rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 1
-    type: RollingUpdate
+  strategy: {}
   template:
     metadata:
       creationTimestamp: null
       labels:
         app: provisioner
     spec:
+      serviceAccountName: order-meow-provisioner
       imagePullSecrets:
         - name: bvesel-pull-secret
-      serviceAccountName: order-meow-provisioner
       containers:
-      - image: bennerv/saas-provisioner:v0.1.0
-        name: saas-provisioner
-        ports:
-          - name: http
-            containerPort: 8080
-        resources:
-          requests:
-            memory: "50m"
-            cpu: "50m"
-          limits:
-            memory: "250m"
-            cpu: "1000m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8080
-            scheme: HTTP
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          successThreshold: 1
-          failureThreshold: 10
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8080
-            scheme: HTTP
-          initialDelaySeconds: 10
-          periodSeconds: 5
-          successThreshold: 1
-          failureThreshold: 10
-          timeoutSeconds: 5
+        - name: provisioner
+          image: bennerv/saas-provisioner:0.1.0
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "50m"
+            limits:
+              memory: "250Mi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+status: {}

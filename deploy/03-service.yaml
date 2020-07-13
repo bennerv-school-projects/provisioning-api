@@ -7,9 +7,8 @@ metadata:
     app: provisioner
 spec:
   type: ClusterIP
-  #type: LoadBalancer
   ports:
-    - name: psql-tcp
+    - name: provisioner
       port: 8080
   selector:
     app: provisioner
