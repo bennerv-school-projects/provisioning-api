@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"github.com/bennerv/provisioning-api/pkg/api/k8sprobes"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"net/http"
-	"provisioning-api/pkg/api/k8sprobes"
 )
 
 // Bring together all routes present in any packages.

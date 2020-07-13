@@ -3,15 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/bennerv/provisioning-api/pkg/api/handlers"
+	"github.com/bennerv/provisioning-api/pkg/config"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"provisioning-api/pkg/api/handlers"
-	"provisioning-api/pkg/config"
 	"syscall"
 )
-
 
 // @title Swagger Kubernetes Provisioning API
 // @version 1.0
