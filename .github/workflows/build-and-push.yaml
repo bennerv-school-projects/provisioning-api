@@ -5,6 +5,9 @@ on:
     types: [created, edited]
 env:
   IMAGE_NAME: bennerv/saas-provisioner
+  CGO_ENABLED: 0 
+  GOOS: linux 
+  GOARCH: amd64
 
 jobs:
 
@@ -27,16 +30,16 @@ jobs:
         go get -v -t -d ./...
 
     - name: Build
-      run: go build -v .
+      run: go build -v ./cmd/main.go
+
+    - name: Login to registry
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login docker.io -u bennerv --password-stdin
 
     - name: Build image
       run: docker build . --file Dockerfile --tag $IMAGE_NAME
       env:
         RELEASE: ${{ github.ref }}
       
-    - name: Login to registry
-      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login docker.io -u bennerv --password-stdin
-
     - name: Push Image
       run: |        
         # Strip git ref prefix from version
