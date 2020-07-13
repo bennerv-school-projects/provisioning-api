@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: provisioner
+  name: order-meow-provisioner
+  labels:
+    app: provisioner
+spec:
+  type: ClusterIP
+  #type: LoadBalancer
+  ports:
+    - name: psql-tcp
+      port: 8080
+  selector:
+    app: provisioner

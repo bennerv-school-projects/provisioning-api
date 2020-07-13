@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: provisioner
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: order-meow-provisioner
+  namespace: provisioner

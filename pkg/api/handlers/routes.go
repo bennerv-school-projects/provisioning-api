@@ -48,7 +48,7 @@ func Routes() *chi.Mux {
 	})
 
 	router.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL("http://localhost:1323/swagger/doc.json"), //The url pointing to API definition"
+		httpSwagger.URL(":8080/swagger/doc.json"), //The url pointing to API definition"
 	))
 
 	return router

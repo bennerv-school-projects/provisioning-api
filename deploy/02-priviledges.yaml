@@ -1,0 +1,33 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: order-meow-provisioner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: order-meow-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: order-meow-provisioner
+    namespace: provisioner
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: order-meow-provisioner
+rules:
+  - apiGroups:
+      - ""
+    attributeRestrictions: null
+    resources:
+      - namespaces
+      - deployments
+      - persistentvolumeclaims
+      - services
+    verbs:
+      - create
+      - update
+      - delete
+      - watch
+      - get
+      - list

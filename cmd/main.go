@@ -12,6 +12,15 @@ import (
 	"syscall"
 )
 
+
+// @title Swagger Kubernetes Provisioning API
+// @version 1.0
+// @description K8s Provisioning API for Order Meow
+
+// @contact.name Ben Vesel
+// @contact.email bves94 AT gmail DOT com
+// @license.name MIT
+// @BasePath /v1
 func main() {
 	if err := run(); err != nil {
 		log.Println("shutting down", "error:", err)
