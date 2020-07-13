@@ -1,0 +1,50 @@
+name: Go
+
+on:
+  release:
+    types: [created, edited]
+env:
+  IMAGE_NAME: bennerv/saas-provisioner
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: |
+        go get -v -t -d ./...
+
+    - name: Build
+      run: go build -v .
+
+    - name: Build image
+      run: docker build . --file Dockerfile --tag $IMAGE_NAME
+      env:
+        RELEASE: ${{ github.ref }}
+      
+    - name: Login to registry
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login docker.io -u bennerv --password-stdin
+
+    - name: Push Image
+      run: |        
+        # Strip git ref prefix from version
+        VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+        # Strip "v" prefix from tag name
+        [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+        # Retag & Push image
+        docker tag $IMAGE_NAME $IMAGE_NAME:$VERSION
+        docker push $IMAGE_NAME:$VERSION
