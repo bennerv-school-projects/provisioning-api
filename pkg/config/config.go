@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"time"
 )
 
@@ -22,14 +21,6 @@ func GetConfig() *Config {
 
 	//TODO - Use a better configuration parsing mechanism (github.com/spf13/viper)
 	config := newConfig()
-
-	// Address
-	val, ok := os.LookupEnv("PORT")
-	if ok {
-		config.Web.Address = val
-	}
-
-	// TODO - Add more configs as needed
 
 	return config
 }

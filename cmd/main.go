@@ -5,10 +5,14 @@ import (
 	"errors"
 	"github.com/bennerv/provisioning-api/pkg/api/handlers"
 	"github.com/bennerv/provisioning-api/pkg/config"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 )
 
@@ -27,23 +31,60 @@ func main() {
 	}
 }
 
+// Initializes the kubernetes go-client for an in cluster configuration using a service token
+func initInClusterConfig() (*kubernetes.Clientset, error) {
+	clusterConfig, err := rest.InClusterConfig()
+	if err != nil {
+		return &kubernetes.Clientset{}, err
+	}
+	// creates the clientset
+	return kubernetes.NewForConfig(clusterConfig)
+}
+
+// Attempt to find a kubeconfig file located at $HOME/.kube/config
+// Initializes the kubernetes go-client for an out of cluster configuration
+func initOutClusterConfig() (*kubernetes.Clientset, error) {
+	kubeconfig := filepath.Join(
+		os.Getenv("HOME"), ".kube", "config",
+	)
+	clusterConfig, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		return &kubernetes.Clientset{}, err
+	}
+
+	return kubernetes.NewForConfig(clusterConfig)
+}
+
+func initKubernetesClient() (*kubernetes.Clientset, error) {
+	clientset, err := initInClusterConfig()
+	if err != nil {
+		clientset, err = initOutClusterConfig()
+	}
+	return clientset, err
+}
+
 func run() error {
+
+	// initialize the logger
+	logger := log.New(os.Stdout, "", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 
 	//todo Read config via a file or environment variables
 	// Configuration
 	cfg := config.GetConfig()
 
-	// initialize the logger
-	logger := log.New(os.Stdout, "", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
+	clientSet, err := initKubernetesClient()
+	if err != nil {
+		panic(err.Error())
+	}
 
 	// Get all the routes out
-	routeHandler := handlers.Routes()
+	routeHandler := handlers.Routes(clientSet)
 
 	// App Starting
 	logger.Println("main: started")
 	defer logger.Println("main: completed")
 
-	// Start API Service
+	// Create the HTTP server
 	api := http.Server{
 		Addr:         cfg.Web.Address,
 		Handler:      routeHandler,

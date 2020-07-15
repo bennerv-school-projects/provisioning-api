@@ -20,6 +20,15 @@ go run cmd/main.go
 
 ## Deploying
 
+### Minikube
+```bash
+# Start minikube
+minikube start --vm=true
+
+# Enable ingress
+minikube addons enable ingress
+```
+
 ### Create Pull Secret
 
 ```bash

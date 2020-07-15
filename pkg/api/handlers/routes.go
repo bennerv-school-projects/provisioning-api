@@ -2,17 +2,18 @@ package handlers
 
 import (
 	"github.com/bennerv/provisioning-api/pkg/api/k8sprobes"
+	"github.com/bennerv/provisioning-api/pkg/api/provisioner"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
-	httpSwagger "github.com/swaggo/http-swagger"
+	"k8s.io/client-go/kubernetes"
 	"net/http"
 )
 
 // Bring together all routes present in any packages.
 // Each package which has routes should have a Routes() function.  This function should be attached to a specific router
 // API mount point here.  They can reference the root path as this will control the location of where things are mounted
-func Routes() *chi.Mux {
+func Routes(clientset *kubernetes.Clientset) *chi.Mux {
 
 	router := chi.NewRouter()
 	router.Use(
@@ -37,9 +38,9 @@ func Routes() *chi.Mux {
 		},
 	)
 
-	// Versions API routes
+	// Versioned API routes for provisioner
 	router.Route("/v1", func(r chi.Router) {
-		//TODO - Add provisioning here
+		r.Mount("/", provisioner.Routes(clientset))
 	})
 
 	// Liveness and Readiness k8s probes
@@ -47,9 +48,9 @@ func Routes() *chi.Mux {
 		r.Mount("/", k8sprobes.Routes())
 	})
 
-	router.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL(":8080/swagger/doc.json"), //The url pointing to API definition"
-	))
+	//router.Get("/swagger/*", httpSwagger.Handler(
+	//	httpSwagger.URL(":8080/swagger/doc.json"), //The url pointing to API definition"
+	//))
 
 	return router
 }
