@@ -6,7 +6,6 @@ GOOS=darwin|linux
 GOARCH=amd64
 
 go build ./cmd/main.go
-
 ```
 
 ### Run
@@ -44,5 +43,6 @@ kubectl create -f deploy/01-namespace.yaml
 kubectl create -f deploy/02-priviledges.yaml
 kubectl create -f deploy/03-service.yaml
 kubectl create -f deploy/04-deployment.yaml
+kubectl create -f deploy/05-ingress.yaml
 ```
  
