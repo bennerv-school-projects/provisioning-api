@@ -22,7 +22,7 @@ go run cmd/main.go
 ### Minikube
 ```bash
 # Start minikube
-minikube start --vm=true
+minikube start --vm=true --memory=8g --cpus=4 --nodes=2
 
 # Enable ingress
 minikube addons enable ingress
