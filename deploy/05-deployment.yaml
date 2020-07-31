@@ -19,11 +19,12 @@ spec:
         app: provisioner
     spec:
       serviceAccountName: order-meow-provisioner
-      imagePullSecrets:
-        - name: bvesel-pull-secret
       containers:
         - name: provisioner
           image: bennerv/saas-provisioner:0.2.0
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/config
           resources:
             requests:
               memory: "50Mi"
@@ -39,4 +40,8 @@ spec:
             httpGet:
               path: /ready
               port: 8080
+      volumes:
+        - name: config-volume
+          configMap:
+            name: saas-files
 status: {}

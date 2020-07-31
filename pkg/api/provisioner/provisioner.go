@@ -8,6 +8,13 @@ import (
 
 var clientset *kubernetes.Clientset
 
+type saasConfig struct {
+	Namespace string
+	PostgresDb string
+	PostgresUser string
+	PostgresPassword string
+}
+
 func Routes(cs *kubernetes.Clientset) *chi.Mux {
 	clientset = cs
 

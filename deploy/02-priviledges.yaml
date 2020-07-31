@@ -24,6 +24,7 @@ rules:
       - deployments
       - persistentvolumeclaims
       - services
+      - ingresses
     verbs:
       - create
       - update
