@@ -3,12 +3,15 @@ package provisioner
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extv1beta1 "k8s.io/api/extensions/v1beta1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	"strings"
 )
+
+const tld string = ".bennerv.com"
 
 // Generic postgres deployment object
 func getPostgresDeploy() *appsv1.Deployment {
@@ -152,7 +155,7 @@ func getFrontendDeploy() *appsv1.Deployment {
 					Containers: []corev1.Container{
 						{
 							Name:  "backend",
-							Image: "bennerv/order-meow-api:0.1.0",
+							Image: "bennerv/order-meow-ui:0.1.2",
 							Env: []corev1.EnvVar{
 								{
 									Name:  "REACT_APP_API_URL",
@@ -174,8 +177,8 @@ func getFrontendDeploy() *appsv1.Deployment {
 									HTTPGet: &corev1.HTTPGetAction{
 										Path: "/",
 										Port: intstr.IntOrString{
-											Type:   intstr.String,
-											StrVal: "3000",
+											Type:   intstr.Int,
+											IntVal: int32(3000),
 										},
 									},
 								},
@@ -219,7 +222,31 @@ func createService(name string, matcher string, port int) *corev1.Service {
 }
 
 // Create a pointer to an ingress with the following params
-func createIngress(name string, service string, namespace string) *extv1beta1.Ingress {
-	return nil
-	//TODO - fill in
+func createIngress(service string, port int, namespace string) *netv1beta1.Ingress {
+	var host string
+	if strings.ToLower(service) == "backend" {
+		host = namespace + "-backend" + tld
+	} else {
+		host = namespace + tld
+	}
+
+	return &netv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: service,
+		},
+		Spec: netv1beta1.IngressSpec{
+			Backend: &netv1beta1.IngressBackend{
+				ServiceName: service,
+				ServicePort: intstr.IntOrString{
+					Type: intstr.Int,
+					IntVal: int32(port),
+				},
+			},
+			Rules: []netv1beta1.IngressRule{
+				{
+					Host: host,
+				},
+			},
+		},
+	}
 }
