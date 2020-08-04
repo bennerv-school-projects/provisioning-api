@@ -32,8 +32,8 @@ minikube addons enable ingress
 
 ```bash
 kubectl -n provisioner create secret docker-registry bvesel-pull-secret \
-  --docker-username=bennerv \
-  --docker-password=801e3784-276d-451e-a3d9-1d714cebaab0 \
+  --docker-username=USERNAME \
+  --docker-password=PASSWORD \
   --docker-email=test@gmail.com
 ```
 
