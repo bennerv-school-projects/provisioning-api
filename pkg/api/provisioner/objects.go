@@ -53,12 +53,12 @@ func getPostgresDeploy() *appsv1.Deployment {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									"memory":    resource.MustParse("50Mi"),
-									"cpu": resource.MustParse("50m"),
+									"memory": resource.MustParse("50Mi"),
+									"cpu":    resource.MustParse("50m"),
 								},
 								Limits: corev1.ResourceList{
-									"memory":    resource.MustParse("250Mi"),
-									"cpu": resource.MustParse("1000m"),
+									"memory": resource.MustParse("250Mi"),
+									"cpu":    resource.MustParse("1000m"),
 								},
 							},
 						},
@@ -131,7 +131,6 @@ func getBackendDeploy() *appsv1.Deployment {
 	}
 }
 
-
 // Frontend deployment object
 func getFrontendDeploy() *appsv1.Deployment {
 	return &appsv1.Deployment{
@@ -154,22 +153,22 @@ func getFrontendDeploy() *appsv1.Deployment {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "backend",
+							Name:  "frontend",
 							Image: "bennerv/order-meow-ui:0.1.2",
 							Env: []corev1.EnvVar{
 								{
 									Name:  "REACT_APP_API_URL",
-									Value: "http://BLAH.backend.info",
+									Value: "",
 								},
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									"memory":    resource.MustParse("50Mi"),
-									"cpu": resource.MustParse("50m"),
+									"memory": resource.MustParse("50Mi"),
+									"cpu":    resource.MustParse("50m"),
 								},
 								Limits: corev1.ResourceList{
-									"memory":    resource.MustParse("1Gi"),
-									"cpu": resource.MustParse("1000m"),
+									"memory": resource.MustParse("1Gi"),
+									"cpu":    resource.MustParse("1000m"),
 								},
 							},
 							ReadinessProbe: &corev1.Probe{
@@ -199,14 +198,13 @@ func getFrontendDeploy() *appsv1.Deployment {
 	}
 }
 
-
 // Create a pointer to a service with the following params
 func createService(name string, matcher string, port int) *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec:       corev1.ServiceSpec{
+		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
 					Name: name,
@@ -238,7 +236,7 @@ func createIngress(service string, port int, namespace string) *netv1beta1.Ingre
 			Backend: &netv1beta1.IngressBackend{
 				ServiceName: service,
 				ServicePort: intstr.IntOrString{
-					Type: intstr.Int,
+					Type:   intstr.Int,
 					IntVal: int32(port),
 				},
 			},

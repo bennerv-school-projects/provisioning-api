@@ -1,6 +1,7 @@
 package provisioner
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"github.com/go-chi/chi"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	appsv1type "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1type "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -22,6 +24,17 @@ var clientset *kubernetes.Clientset
 
 type Namespace struct {
 	Namespace string `json:"namespace"`
+}
+
+type BackendUser struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type namespacePatch struct {
+	Op    string            `json:"op"`
+	Path  string            `json:"path"`
+	Value map[string]string `json:"value"`
 }
 
 func Routes(cs *kubernetes.Clientset) *chi.Mux {
@@ -112,10 +125,10 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 		postgresDeploy, err = deploymentClient.Create(context.Background(), postgresDeploy, metav1.CreateOptions{})
 		if err != nil {
 			fmt.Printf("Failed to create postgresql deployment in namespace %v.  Error was %v\n", config.Namespace, err.Error())
-			fmt.Printf("Postgres deployment object: %v\n", postgresDeploy)
 			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create postgresql deployment")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: created postgresql deployment")
 
 		// Wait on the postgresql deployment to become ready
 		err = waitOnDeployment(deploymentClient, postgresDeploy.Name)
@@ -124,6 +137,7 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Postgresql deployment not ready")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: postgresql deployment ready")
 
 		// Create postgresql service
 		serviceClient := clientset.CoreV1().Services(config.Namespace)
@@ -135,6 +149,7 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create postgresql service")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: created postgresql service")
 
 		// Update backend deployment
 		for i, container := range backendDeploy.Spec.Template.Spec.Containers {
@@ -156,6 +171,7 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create backend deployment")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: created backend deployment")
 
 		// Wait on the backend deployment to become ready
 		err = waitOnDeployment(deploymentClient, backendDeploy.Name)
@@ -164,6 +180,7 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Backend deployment not ready")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: backend deployment ready")
 
 		// Create backend service
 		service = createService("backend", "backend", 8080)
@@ -174,6 +191,7 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create backend service")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: created backend service")
 
 		// Create backend ingress (namespace-backend.tld)
 		ingressClient := clientset.NetworkingV1beta1().Ingresses(config.Namespace)
@@ -185,10 +203,20 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create backend ingress")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: created backend ingress")
 
-		// TODO - Create backend username/password
-
-
+		// Update frontend deployment
+		for i, container := range frontendDeploy.Spec.Template.Spec.Containers {
+			if container.Name == "frontend" {
+				for j, env := range frontendDeploy.Spec.Template.Spec.Containers[i].Env {
+					if env.Name == "REACT_APP_API_URL" {
+						frontendDeploy.Spec.Template.Spec.Containers[i].Env[j].Value = "http://" + config.Namespace + "-backend" + tld
+						break
+					}
+				}
+				break
+			}
+		}
 
 		// Create frontend deployment
 		frontendDeploy, err = deploymentClient.Create(context.Background(), frontendDeploy, metav1.CreateOptions{})
@@ -197,6 +225,7 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create frontend deployment")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: created frontend deployment")
 
 		// Wait on the Frontend deployment to become ready
 		err = waitOnDeployment(deploymentClient, frontendDeploy.Name)
@@ -205,6 +234,7 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Frontend deployment not ready")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: frontend deployment ready")
 
 		// Create Frontend service
 		service = createService("frontend", "frontend", 3000)
@@ -215,7 +245,7 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create frontend service")
 			return
 		}
-
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: created frontend service")
 
 		// Create frontend ingress (namespace.tld)
 		frontendIngress := createIngress("frontend", 3000, config.Namespace)
@@ -226,36 +256,82 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create frontend ingress")
 			return
 		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: created frontend ingress")
+
+		// Create backend password
+		backendPassword := generatePassword()
+		backendCreds := BackendUser{
+			Username: "admin",
+			Password: backendPassword,
+		}
+		userJson, _ := json.Marshal(backendCreds)
+		userReader := bytes.NewReader(userJson)
+		resp, err := http.Post("http://"+config.Namespace+"-backend"+tld+"/register", "application/json", userReader)
+		if err != nil {
+			fmt.Printf("Failed to create admin user for the backend in namespace %v. Error was %v\n", config.Namespace, err.Error())
+			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create backend admin user")
+			return
+		}
+
+		if resp.StatusCode >= 300 || resp.StatusCode < 200 {
+			fmt.Printf("Failed to create admin user for the backend in namespace %v\n", config.Namespace)
+			fmt.Printf("Status code: %v", resp.StatusCode)
+			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create backend admin user")
+			return
+		}
+
+		backendSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "backend-creds"},
+			StringData: map[string]string{"username": "admin", "password": backendPassword},
+		}
+
+		// Create backend secret for admin user/pass
+		backendSecret, err = clientset.CoreV1().Secrets(config.Namespace).Create(context.Background(), backendSecret, metav1.CreateOptions{})
+		if err != nil {
+			fmt.Printf("Failed to create secret for the backend in namespace %v. Error was %v\n", config.Namespace, err.Error())
+			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create backend secret")
+			return
+		}
+
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Completed")
+
 	}()
 
 	// Respond
 	w.WriteHeader(http.StatusCreated)
 }
 
-// Update namespace with error annotations to be read later "status" annotation
-func annotateNamespaceWithError(namespaceClient corev1type.NamespaceInterface, namespace *corev1.Namespace, str string) {
-	annotations := namespace.GetAnnotations()
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
+// Update namespace with error annotations to be read later "error" annotation
+func annotateNamespaceWithStatus(namespaceClient corev1type.NamespaceInterface, namespace *corev1.Namespace, status string) {
+	annotationsPatch := []byte(fmt.Sprintf(`{"metadata":{"annotations": {"status": "%s", "manager": "saas" }}}`, status))
 
-	annotations["status"] = str
-	namespace.SetAnnotations(annotations)
-	_, _ = namespaceClient.Update(context.Background(), namespace, metav1.UpdateOptions{})
+	namespace, err := namespaceClient.Patch(context.Background(), namespace.Name, types.MergePatchType, annotationsPatch, metav1.PatchOptions{}, "")
+	if err != nil {
+		fmt.Printf("failed to patch namespace with status... error %v\n", err)
+	}
+}
+
+// Update namespace with error annotations to be read later "error" annotation
+func annotateNamespaceWithError(namespaceClient corev1type.NamespaceInterface, namespace *corev1.Namespace, errStr string) {
+	annotationsPatch := []byte(fmt.Sprintf(`{"metadata":{"annotations": {"status": "Failed", "manager": "saas", "error": "%s" }}}`, errStr))
+
+	namespace, err := namespaceClient.Patch(context.Background(), namespace.Name, types.MergePatchType, annotationsPatch, metav1.PatchOptions{}, "")
+	if err != nil {
+		fmt.Printf("failed to patch namespace with status... error %v\n", err)
+	}
 }
 
 // Wait for a deployment to become ready
 func waitOnDeployment(deploymentClient appsv1type.DeploymentInterface, deployName string) error {
-	for start := time.Now(); time.Since(start) < 180 * time.Second; {
-			deploy, _ := deploymentClient.Get(context.Background(), deployName, metav1.GetOptions{})
-			if deploy.Status.ReadyReplicas >= 1 {
-				return nil
-			}
+	for start := time.Now(); time.Since(start) < 180*time.Second; {
+		deploy, _ := deploymentClient.Get(context.Background(), deployName, metav1.GetOptions{})
+		if deploy.Status.ReadyReplicas >= 1 {
+			return nil
+		}
 	}
 
 	return errors.New("deployment was not ready in 120 seconds")
 }
-
 
 // Convert namespace string to valid k8s string
 func validateNamespace(namespace string) (string, error) {
@@ -265,7 +341,7 @@ func validateNamespace(namespace string) (string, error) {
 	}
 
 	// Validate name on the namespace
-	if ! reg.MatchString(namespace) || len(namespace) > 63 {
+	if !reg.MatchString(namespace) || len(namespace) > 63 {
 		return "", errors.New("invalid namespace name")
 	}
 
