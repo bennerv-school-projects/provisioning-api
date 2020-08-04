@@ -22,7 +22,7 @@ import (
 
 var clientset *kubernetes.Clientset
 
-type Namespace struct {
+type NamespaceRequest struct {
 	Namespace string `json:"namespace"`
 }
 
@@ -77,8 +77,8 @@ func GetSaaS(w http.ResponseWriter, r *http.Request) {
 			if strings.ToLower(annotations["status"]) == "completed" {
 				secret, err := clientset.CoreV1().Secrets(val.Name).Get(context.Background(), "backend-creds", metav1.GetOptions{})
 				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
+					fmt.Printf("Error fetching backend-creds %v\n", err)
+					continue
 				}
 
 				ns.Username = string(secret.Data["username"])
@@ -110,6 +110,27 @@ func GetSaaS(w http.ResponseWriter, r *http.Request) {
 
 // Delete an instance of SaaS
 func DeleteSaaS(w http.ResponseWriter, r *http.Request) {
+	var ns NamespaceRequest
+
+	// Decode request
+	err := json.NewDecoder(r.Body).Decode(&ns)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	_, err = clientset.CoreV1().Namespaces().Get(context.Background(), ns.Namespace, metav1.GetOptions{})
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	err = clientset.CoreV1().Namespaces().Delete(context.Background(), ns.Namespace, metav1.DeleteOptions{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 
 }
 
@@ -117,7 +138,7 @@ func DeleteSaaS(w http.ResponseWriter, r *http.Request) {
 // Note: the database is not persistent until a PVC is created and mounted at the correct location
 func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 
-	var config Namespace
+	var config NamespaceRequest
 
 	// Decode request
 	err := json.NewDecoder(r.Body).Decode(&config)
