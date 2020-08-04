@@ -31,10 +31,13 @@ type BackendUser struct {
 	Password string `json:"password"`
 }
 
-type namespacePatch struct {
-	Op    string            `json:"op"`
-	Path  string            `json:"path"`
-	Value map[string]string `json:"value"`
+type NamespaceResponse struct {
+	Name     string `json:"name,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Error    string `json:"error,omitempty"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	Url      string `json:"url,omitempty"`
 }
 
 func Routes(cs *kubernetes.Clientset) *chi.Mux {
@@ -42,24 +45,76 @@ func Routes(cs *kubernetes.Clientset) *chi.Mux {
 
 	router := chi.NewRouter()
 	router.Post("/saas", CreateSaaS)
-	router.Get("/saas", nil)
-	router.Delete("/saas", nil)
+	router.Get("/saas", GetSaaS)
+	router.Delete("/saas", DeleteSaaS)
 	return router
 }
 
-func generatePassword() string {
-	rand.Seed(time.Now().UnixNano())
-	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-		"abcdefghijklmnopqrstuvwxyz" +
-		"0123456789")
-	length := 8
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
+// Get all instances of SaaS
+func GetSaaS(w http.ResponseWriter, r *http.Request) {
+
+	namespaces, err := clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	return b.String()
+
+	var nsResponse []NamespaceResponse
+
+	// Look for manager": "saas" annotation
+	for _, val := range namespaces.Items {
+		if annotations := val.GetAnnotations(); annotations != nil && annotations["manager"] == "saas" {
+
+			// Populate the return object
+			ns := NamespaceResponse{
+				Name:   val.Name,
+				Status: annotations["status"],
+				Error:  annotations["error"],
+				Url:    "http://" + val.Name + tld,
+			}
+
+			// Get the secret if the SaaS is in 'Completed' state
+			if strings.ToLower(annotations["status"]) == "completed" {
+				secret, err := clientset.CoreV1().Secrets(val.Name).Get(context.Background(), "backend-creds", metav1.GetOptions{})
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				ns.Username = string(secret.Data["username"])
+				ns.Password = string(secret.Data["password"])
+			}
+
+			// Append the response
+			nsResponse = append(nsResponse, ns)
+		}
+	}
+
+	// If no namespaces, write empty string
+	if len(nsResponse) == 0 {
+		_, _ = w.Write([]byte(""))
+		return
+	}
+
+	// Marshal json
+	nsResponseJson, err := json.Marshal(nsResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Write response
+	_, _ = w.Write(nsResponseJson)
+
 }
 
+// Delete an instance of SaaS
+func DeleteSaaS(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// Provisions an instance of Order-Meow UI, Backend, and a Database
+// Note: the database is not persistent until a PVC is created and mounted at the correct location
 func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 
 	var config Namespace
@@ -299,6 +354,20 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 
 	// Respond
 	w.WriteHeader(http.StatusCreated)
+}
+
+// Generate a database and backend password (8 characters in length)
+func generatePassword() string {
+	rand.Seed(time.Now().UnixNano())
+	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
+		"abcdefghijklmnopqrstuvwxyz" +
+		"0123456789")
+	length := 8
+	var b strings.Builder
+	for i := 0; i < length; i++ {
+		b.WriteRune(chars[rand.Intn(len(chars))])
+	}
+	return b.String()
 }
 
 // Update namespace with error annotations to be read later "error" annotation
