@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const tld string = ".bennerv.com"
+const tld string = ".gcp.bennerv.com"
 
 // Generic postgres deployment object
 func getPostgresDeploy() *appsv1.Deployment {

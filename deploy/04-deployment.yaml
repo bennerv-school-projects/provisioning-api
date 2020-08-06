@@ -21,10 +21,7 @@ spec:
       serviceAccountName: order-meow-provisioner
       containers:
         - name: provisioner
-          image: bennerv/saas-provisioner:0.2.0
-          volumeMounts:
-            - name: config-volume
-              mountPath: /etc/config
+          image: bennerv/saas-provisioner:0.3.1
           resources:
             requests:
               memory: "50Mi"
@@ -40,8 +37,4 @@ spec:
             httpGet:
               path: /ready
               port: 8080
-      volumes:
-        - name: config-volume
-          configMap:
-            name: saas-files
 status: {}
