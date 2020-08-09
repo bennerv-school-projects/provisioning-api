@@ -21,7 +21,7 @@ spec:
       serviceAccountName: order-meow-provisioner
       containers:
         - name: provisioner
-          image: bennerv/saas-provisioner:0.4.0
+          image: bennerv/saas-provisioner:0.4.1
           resources:
             requests:
               memory: "50Mi"

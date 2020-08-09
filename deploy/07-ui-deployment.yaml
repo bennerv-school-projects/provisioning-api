@@ -16,10 +16,10 @@ spec:
       labels:
         app: provisioner-ui
     spec:
-      serviceAccountName: order-meow-provisioner-ui
+      serviceAccountName: default
       containers:
         - name: provisioner-ui
-          image: bennerv/provisioning-ui:0.1.0
+          image: bennerv/provisioning-ui:0.1.2
           resources:
             requests:
               memory: "50Mi"

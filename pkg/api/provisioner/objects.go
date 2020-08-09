@@ -50,6 +50,10 @@ func getPostgresDeploy() *appsv1.Deployment {
 									Name:  "POSTGRES_PASSWORD",
 									Value: "",
 								},
+								{
+									Name: "PGDATA",
+									Value: "/var/lib/postgresql/data/pgdata",
+								},
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
