@@ -21,14 +21,41 @@ rules:
     attributeRestrictions: null
     resources:
       - namespaces
-      - deployments
       - persistentvolumeclaims
       - services
-      - ingresses
+      - secrets
     verbs:
       - create
+      - patch
       - update
       - delete
       - watch
       - get
       - list
+  - apiGroups:
+      - "apps"
+    attributeRestrictions: null
+    resources:
+      - deployments
+    verbs:
+      - create
+      - patch
+      - update
+      - delete
+      - watch
+      - get
+      - list
+  - apiGroups:
+      - "networking.k8s.io"
+    resources:
+      - ingresses
+    verbs:
+      - create
+      - patch
+      - update
+      - delete
+      - watch
+      - get
+      - list
+
+

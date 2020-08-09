@@ -61,6 +61,23 @@ func getPostgresDeploy() *appsv1.Deployment {
 									"cpu":    resource.MustParse("1000m"),
 								},
 							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "volume",
+									MountPath: "/var/lib/postgresql/data",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "volume",
+							VolumeSource: corev1.VolumeSource{
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "volume",
+									ReadOnly:  false,
+								},
+							},
 						},
 					},
 				},
@@ -68,6 +85,25 @@ func getPostgresDeploy() *appsv1.Deployment {
 			Strategy:             appsv1.DeploymentStrategy{},
 			MinReadySeconds:      0,
 			RevisionHistoryLimit: pointer.Int32Ptr(2),
+		},
+	}
+}
+
+// PVC object
+func getPersistentVolumeClaim() *corev1.PersistentVolumeClaim {
+	return &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "volume",
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					"storage": resource.MustParse("5Gi"),
+				},
+			},
 		},
 	}
 }

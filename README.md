@@ -28,21 +28,8 @@ minikube start --vm=true --memory=16g --cpus=8
 minikube addons enable ingress
 ```
 
-### Create Pull Secret
-
-```bash
-kubectl -n provisioner create secret docker-registry bvesel-pull-secret \
-  --docker-username=USERNAME \
-  --docker-password=PASSWORD \
-  --docker-email=test@gmail.com
-```
-
 ### Apply the Files
 ```bash
-kubectl create -f deploy/01-namespace.yaml
-kubectl create -f deploy/02-priviledges.yaml
-kubectl create -f deploy/03-service.yaml
-kubectl create -f deploy/04-deployment.yaml
-kubectl create -f deploy/05-ingress.yaml
+kubectl create -f deploy/
 ```
  

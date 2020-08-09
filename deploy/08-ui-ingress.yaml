@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1beta1 # for versions before 1.14 use extensions/v1beta1
+kind: Ingress
+metadata:
+  name: provisioner-ui
+  namespace: provisioner
+  annotations:
+    kubernetes.io/ingress.class: nginx
+
+spec:
+  rules:
+    - host: provisioner-ui.gcp.bennerv.com
+      http:
+        paths:
+          - backend:
+              serviceName: order-meow-provisioner-ui
+              servicePort: 3000

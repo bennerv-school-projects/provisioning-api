@@ -47,11 +47,17 @@ func Routes(cs *kubernetes.Clientset) *chi.Mux {
 	router.Post("/saas", CreateSaaS)
 	router.Get("/saas", GetSaaS)
 	router.Delete("/saas", DeleteSaaS)
+	router.Options("/saas", AllowOptions)
 	return router
 }
 
+func AllowOptions(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+}
+
 // Get all instances of SaaS
-func GetSaaS(w http.ResponseWriter, r *http.Request) {
+// Get all instances of SaaS
+func GetSaaS(w http.ResponseWriter, _ *http.Request) {
 
 	namespaces, err := clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -168,6 +174,9 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		password := generatePassword()
 
+		// Create PVC
+		postgresPVC := getPersistentVolumeClaim()
+
 		// Create deployment objects
 		postgresDeploy := getPostgresDeploy()
 		backendDeploy := getBackendDeploy()
@@ -182,6 +191,18 @@ func CreateSaaS(w http.ResponseWriter, r *http.Request) {
 				},
 			},
 		}, metav1.CreateOptions{})
+
+		// Update PVC
+		postgresPVC.Namespace = config.Namespace
+
+		// Create PVC
+		postgresPVC, err := clientset.CoreV1().PersistentVolumeClaims(config.Namespace).Create(context.Background(), postgresPVC, metav1.CreateOptions{})
+		if err != nil {
+			fmt.Printf("Failed to create PVC in namespace %v.  Error was %v\n", config.Namespace, err.Error())
+			annotateNamespaceWithError(namespaceClient, namespace, "Failed to create postgresql pvc")
+			return
+		}
+		annotateNamespaceWithStatus(namespaceClient, namespace, "Working: created postgresql pvc")
 
 		// Update postgresql deployment
 		for i, container := range postgresDeploy.Spec.Template.Spec.Containers {

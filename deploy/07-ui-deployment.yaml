@@ -1,40 +1,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
-    app: provisioner
-  name: provisioner
+    app: provisioner-ui
+  name: provisioner-ui
   namespace: provisioner
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: provisioner
+      app: provisioner-ui
   strategy: {}
   template:
     metadata:
-      creationTimestamp: null
       labels:
-        app: provisioner
+        app: provisioner-ui
     spec:
-      serviceAccountName: order-meow-provisioner
+      serviceAccountName: order-meow-provisioner-ui
       containers:
-        - name: provisioner
-          image: bennerv/saas-provisioner:0.4.0
+        - name: provisioner-ui
+          image: bennerv/provisioning-ui:0.1.0
           resources:
             requests:
               memory: "50Mi"
               cpu: "50m"
             limits:
-              memory: "250Mi"
-              cpu: "1000m"
+              memory: "200Mi"
+              cpu: "100m"
           livenessProbe:
             httpGet:
-              path: /health
-              port: 8080
+              path: /
+              port: 3000
           readinessProbe:
             httpGet:
-              path: /ready
-              port: 8080
+              path: /
+              port: 3000
 status: {}
